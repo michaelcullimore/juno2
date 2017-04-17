@@ -5,6 +5,8 @@ import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -27,7 +29,6 @@ public class JUnoClient extends JFrame implements Receivable {
     private static final long serialVersionUID = -4953493595169902287L;
 
     public static void main(String[] args) {
-	// TODO Auto-generated method stub
 	EventQueue.invokeLater(new Runnable() {
 	    @Override
 	    public void run() {
@@ -36,7 +37,6 @@ public class JUnoClient extends JFrame implements Receivable {
 		    client.setVisible(true);
 
 		} catch (Exception e) {
-		    // TODO: handle exception
 		    e.printStackTrace();
 		}
 	    }
@@ -52,7 +52,6 @@ public class JUnoClient extends JFrame implements Receivable {
     private boolean userIsSet = false;
 
     public JUnoClient() {
-	// TODO Auto-generated constructor stub
 	connectToServer();
 
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -66,11 +65,9 @@ public class JUnoClient extends JFrame implements Receivable {
     }
 
     private void connectToServer() {
-	// TODO Auto-generated method stub
 	try {
 	    protocol = new Protocol(this);
 	} catch (Exception e) {
-	    // TODO: handle exception
 	    System.err.println("Error in protocol setup!");
 	    e.printStackTrace();
 	}
@@ -78,22 +75,20 @@ public class JUnoClient extends JFrame implements Receivable {
 
     @Override
     public void giveMessage(JSONObject jsonM) {
-	// TODO Auto-generated method stub
-	JSONObject message = jsonM;
-	if (message.getString("type").equals("chat")) {// could be "message"
-	    handleMessages(message);
+	JSONObject jsonMessage = jsonM;
+	if (jsonMessage.getString("type").equals("chat")) {// could be "message"
+	    handleMessages(jsonMessage);
 	}
 
     }
 
     public void handleMessages(JSONObject jsonM) {
-	JSONObject message = jsonM;
-	System.out.println(message.toString());
-	messageArea.append(message.getString("fromUser") + ": " + message.getString("message") + "\n");
+	JSONObject jsonMessage = jsonM;
+	System.out.println(jsonMessage.toString());
+	messageArea.append(jsonMessage.getString("fromUser") + ": " + jsonMessage.getString("message") + "\n");
     }
 
     private void initChat() {
-	// TODO Auto-generated method stub
 	JPanel sendPanel = new JPanel(new FlowLayout());
 	sendArea = new JTextArea(3, 20);
 	sendArea.setEditable(true);
@@ -132,7 +127,6 @@ public class JUnoClient extends JFrame implements Receivable {
     }
 
     private void initGameArea() {
-	// TODO Auto-generated method stub
 	JPanel gamePanel = new JPanel(new BorderLayout());
 	JButton startButton = new JButton("Start Game");
 	startButton.addActionListener(e -> startGame());
@@ -145,33 +139,54 @@ public class JUnoClient extends JFrame implements Receivable {
 
     }
 
-    protected void sendMessage() {
-	// TODO Auto-generated method stub
-	System.out.println("Execution of sendText() complete.");
+    public void printMessage(String message) {
+	messageArea.append(message + "\n");
+	messageArea.setCaretPosition(messageArea.getDocument().getLength());
+    }
+
+    private void sendMessage() {
+	JSONObject jsonMessage = new JSONObject();
+
 	String messageSend;
 	messageSend = sendArea.getText();
-	JSONObject message = new JSONObject();
-	message.put("type", "chat");
-	message.put("message", messageSend);
-	protocol.sendMessage(message);
-	messageArea.append(username + ": " + messageSend + "\n");
+
+	if (messageSend == "\\whois") {
+	    jsonMessage.put("type", "whois");
+	    return;
+	}
+
+	jsonMessage.put("type", "chat");
+
+	String whisperRegex = "(?<=^|(?<=[^a-zA-Z0-9-_\\\\.]))@([A-Za-z][A-Za-z0-9_]+)";
+	Matcher matcher = Pattern.compile(whisperRegex).matcher(messageSend);
+	if (matcher.find()) {
+	    System.out.println(matcher.group(0));
+	    StringBuilder whisperRecipient = new StringBuilder(matcher.group(0));
+	    whisperRecipient.deleteCharAt(0);
+	    System.out.println(whisperRecipient);
+	    jsonMessage.put("username", whisperRecipient);
+	    messageSend += " (Whispered from " + username + ")";
+	}
+
+	jsonMessage.put("message", messageSend);
+	System.out.println("Execution of sendText() complete.");
+	protocol.sendMessage(jsonMessage);
+	printMessage(username + ": " + messageSend + "\n");
 	sendArea.setText("");
     }
 
     @Override
     public void setUsername(String user) {
-	// TODO Auto-generated method stub
 	if (!userIsSet) {
 	    this.username = user;
 	}
     }
 
     private void startGame() {
-	// TODO Auto-generated method stub
-	messageArea.append("Sending Request for a New Game");
-	JSONObject message = new JSONObject();
-	message.put("type", "startGame");
-	protocol.sendMessage(message);
+	JSONObject jsonMessage = new JSONObject();
+	printMessage("Sending Request for a New Game");
+	jsonMessage.put("type", "startGame");
+	protocol.sendMessage(jsonMessage);
     }
 
 }
