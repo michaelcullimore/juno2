@@ -10,8 +10,8 @@ public class Card extends JLabel {
     };
 
     public static enum Value {
-	ZERO("00"), ONE("01"), TWO("02"), THREE("03"), FOUR("04"), FIVE("05"), SIX("06"), SEVEN("07"), EIGHT(
-		"08"), NINE("09"), SKIP("S"), DRAW2("D2"), REVERSE("R"), WILD("00"), WILDD4("D4");
+	ZERO("0"), ONE("1"), TWO("2"), THREE("3"), FOUR("4"), FIVE("5"), SIX("6"), SEVEN("7"), EIGHT("8"), NINE(
+		"9"), SKIP("S"), DRAW2("D2"), REVERSE("R"), WILD("W"), WILDD4("D4");
 
 	private String numVal;
 
@@ -27,7 +27,6 @@ public class Card extends JLabel {
     private static final long serialVersionUID = 9;
 
     public static void main(String[] args) {
-	// TODO Auto-generated method stub
 
     }
 
@@ -54,7 +53,6 @@ public class Card extends JLabel {
     }
 
     private void setImage() {
-	// TODO Auto-generated method stub
 	ImageIcon cardImage = new ImageIcon(getClass().getResource("/resources/cardImages/red-00.png"));
 	setIcon(cardImage);
     }

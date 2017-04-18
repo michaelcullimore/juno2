@@ -3,6 +3,7 @@ package juno2;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.regex.Matcher;
@@ -16,6 +17,7 @@ import javax.swing.JTextArea;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import junoServer.Protocol;
@@ -50,12 +52,14 @@ public class JUnoClient extends JFrame implements Receivable {
     private String username;
 
     private boolean userIsSet = false;
+    private boolean gameStarted = false;
 
     public JUnoClient() {
 	connectToServer();
 
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	setBounds(200, 200, 800, 600);
+	contentPanel = new JPanel();
 	contentPanel.setLayout(new BorderLayout());
 	contentPanel.setBorder(new EmptyBorder(3, 3, 3, 3));
 	setContentPane(contentPanel);
@@ -76,24 +80,53 @@ public class JUnoClient extends JFrame implements Receivable {
     @Override
     public void giveMessage(JSONObject jsonM) {
 	JSONObject jsonMessage = jsonM;
-	if (jsonMessage.getString("type").equals("chat")) {// could be "message"
-	    handleMessages(jsonMessage);
+	System.out.println(jsonMessage.toString());
+	String type = jsonMessage.getString("type");
+	switch (type) {
+	case ("chat"): {
+	    handleChat(jsonMessage);
+	    break;
 	}
+	case ("whois"): {
+	    handleWhois(jsonMessage);
+	    break;
+	}
+	case ("application"): {
+	    handleApplication(jsonMessage);
+	}
+
+	}
+    }
+
+    private void handleApplication(JSONObject jsonMessage) {
 
     }
 
-    public void handleMessages(JSONObject jsonM) {
+    public void handleChat(JSONObject jsonM) {
 	JSONObject jsonMessage = jsonM;
 	System.out.println(jsonMessage.toString());
 	messageArea.append(jsonMessage.getString("fromUser") + ": " + jsonMessage.getString("message") + "\n");
     }
 
+    private void handleWhois(JSONObject jsonM) {
+	JSONArray usernames = jsonM.getJSONObject("message").getJSONArray("username");
+	if (usernames.length() == 1) {
+	    printMessage("You're the only one here.");
+	}
+	printMessage("User Online: ");
+	for (int i = 0; i < usernames.length(); i++) {
+	    printMessage((i + 1) + ": " + usernames.getJSONObject(i).get("username").toString());
+	}
+    }
+
     private void initChat() {
 	JPanel sendPanel = new JPanel(new FlowLayout());
+	messageArea.setFont(new Font("Arial", Font.PLAIN, 16));
 	sendArea = new JTextArea(3, 20);
 	sendArea.setEditable(true);
 	sendArea.setWrapStyleWord(true);
 	sendArea.setLineWrap(true);
+	sendArea.setFont(new Font("Arial", Font.PLAIN, 16));
 	JScrollPane sendScroll = new JScrollPane(sendArea);
 	sendScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 	sendPanel.add(sendScroll);
@@ -108,9 +141,10 @@ public class JUnoClient extends JFrame implements Receivable {
 
 	JPanel messagePanel = new JPanel(new BorderLayout());
 	messageArea = new JTextArea();
-	messageArea.setEditable(true);
+	messageArea.setEditable(false);
 	messageArea.setWrapStyleWord(true);
 	messageArea.setLineWrap(true);
+
 	JScrollPane messageScroll = new JScrollPane(messageArea);
 	messageScroll.setSize(getSize());//
 	messageScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
@@ -119,7 +153,9 @@ public class JUnoClient extends JFrame implements Receivable {
 	JButton send = new JButton("Send");
 	sendPanel.add(send);
 	send.addActionListener(e -> sendMessage());
-
+	JButton startButton = new JButton("Start Game");
+	startButton.addActionListener(e -> startGame());
+	messagePanel.add(startButton);
 	messagePanel.add(sendPanel, "South");
 	contentPanel.add(messagePanel, "West");
 	messagePanel.setVisible(true);
@@ -128,13 +164,10 @@ public class JUnoClient extends JFrame implements Receivable {
 
     private void initGameArea() {
 	JPanel gamePanel = new JPanel(new BorderLayout());
-	JButton startButton = new JButton("Start Game");
-	startButton.addActionListener(e -> startGame());
 
 	// tests whether or not the picture of the card comes through
-	Card cardTest1 = new Card(Card.Color.RED, Card.Value.ZERO);
-	gamePanel.add(cardTest1, "Center");
-	gamePanel.add(startButton, "South");
+	// Card cardTest1 = new Card(Card.Color.RED, Card.Value.ZERO);
+	// gamePanel.add(cardTest1, "Center");
 	contentPanel.add(gamePanel, "Center");
 
     }
@@ -150,8 +183,11 @@ public class JUnoClient extends JFrame implements Receivable {
 	String messageSend;
 	messageSend = sendArea.getText();
 
-	if (messageSend == "\\whois") {
+	if (messageSend.equals("\\whois")) {
 	    jsonMessage.put("type", "whois");
+	    protocol.sendMessage(jsonMessage);
+	    sendArea.setText("");
+	    printMessage("The \"whois\" function has been requested.");
 	    return;
 	}
 
@@ -185,7 +221,15 @@ public class JUnoClient extends JFrame implements Receivable {
     private void startGame() {
 	JSONObject jsonMessage = new JSONObject();
 	printMessage("Sending Request for a New Game");
-	jsonMessage.put("type", "startGame");
+	jsonMessage.put("type", "application");
+	JSONObject action = new JSONObject();
+	if (gameStarted) {
+	    action.put("action", "joinGame");
+	} else {
+	    action.put("action", "startGame");
+	}
+	action.put("module", "juno");
+	jsonMessage.put("message", action);
 	protocol.sendMessage(jsonMessage);
     }
 
