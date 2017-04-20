@@ -5,6 +5,7 @@ import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,7 +23,7 @@ import org.json.JSONObject;
 import junoServer.Protocol;
 import junoServer.Receivable;
 
-public class JUnoClient extends JFrame implements Receivable {
+public class JUnoClient2 extends JFrame implements Receivable {
 
     /**
      *
@@ -34,7 +35,7 @@ public class JUnoClient extends JFrame implements Receivable {
 	    @Override
 	    public void run() {
 		try {
-		    JUnoClient client = new JUnoClient();
+		    JUnoClient2 client = new JUnoClient2();
 		    client.setVisible(true);
 
 		} catch (Exception e) {
@@ -44,34 +45,40 @@ public class JUnoClient extends JFrame implements Receivable {
 	});
     }
 
-    private JPanel contentPanel;
+    private JPanel contentPane;
     private JTextArea messageArea;
-    private JTextArea sendArea;
+    private JTextArea messageInputArea;
     private Protocol protocol;
     private String username;
 
     private boolean userIsSet = false;
     private boolean gameStarted = false;
+    private JPanel cardPane;
+    private JPanel playerHand;
+    private JPanel cpuHand1;
+    private JPanel cpuHand2;
+    private JPanel cpuHand3;
 
-    public JUnoClient() {
+    public JUnoClient2() {
 	connectToServer();
 
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	setBounds(200, 200, 800, 600);
-	contentPanel = new JPanel();
-	contentPanel.setLayout(new BorderLayout());
-	contentPanel.setBorder(new EmptyBorder(3, 3, 3, 3));
-	setContentPane(contentPanel);
+	setBounds(100, 100, 800, 600);
+	contentPane = new JPanel();
+	contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+	contentPane.setLayout(new BorderLayout());
+	setContentPane(contentPane);
+	contentPane.setLayout(new BorderLayout());
 
 	initGameArea();
-	initChat();
+	initMessages();
     }
 
     private void connectToServer() {
 	try {
 	    protocol = new Protocol(this);
-	} catch (Exception e) {
-	    System.err.println("Error in protocol setup!");
+	} catch (IOException e) {
+	    System.err.println("Error in protocol setup!!!");
 	    e.printStackTrace();
 	}
     }
@@ -79,38 +86,48 @@ public class JUnoClient extends JFrame implements Receivable {
     @Override
     public void giveMessage(JSONObject jsonM) {
 	JSONObject jsonMessage = jsonM;
-	System.out.println(jsonMessage.toString());
-	String type = jsonMessage.getString("type");
-	switch (type) {
-	case ("chat"): {
-	    handleChat(jsonMessage);
-	    break;
+	if (jsonMessage.has("type")) {
+	    String type = jsonMessage.getString("type");
+	    switch (type) {
+	    case ("chat"): {
+		handleChat(jsonMessage);
+		break;
+	    }
+	    case ("whois"): {
+		handleWhois(jsonMessage);
+		break;
+	    }
+	    }
 	}
-	case ("whois"): {
-	    handleWhois(jsonMessage);
-	    break;
+	if (jsonMessage.has("action")) {
+	    String action = jsonMessage.getString("action");
+	    switch (action) {
+	    case ("dealCard"): {
+		handleDealCard(jsonMessage);
+		break;
+	    }
+	    }
 	}
-	case ("application"): {
-	    handleApplication(jsonMessage);
-	}
-
-	}
-    }
-
-    private void handleApplication(JSONObject jsonMessage) {
-
     }
 
     public void handleChat(JSONObject jsonM) {
 	JSONObject jsonMessage = jsonM;
 	System.out.println(jsonMessage.toString());
-	messageArea.append(jsonMessage.getString("fromUser") + ": " + jsonMessage.getString("message") + "\n");
+	printMessage(jsonMessage.getString("fromUser") + ": " + jsonMessage.getString("message"));
+    }
+
+    private void handleDealCard(JSONObject jsonM) {
+	JSONObject jsonMessage = new JSONObject(jsonM.getString("card"));
+	Card.Color color = Card.Color.valueOf(jsonMessage.getString("color"));
+	Card.Value value = Card.Value.valueOf(jsonMessage.getString("value"));
+	Card card = new Card(color, value);
+	placeCard(card, playerHand);
     }
 
     private void handleWhois(JSONObject jsonM) {
 	JSONArray usernames = jsonM.getJSONObject("message").getJSONArray("username");
 	if (usernames.length() == 1) {
-	    printMessage("You're the only one here.");
+	    printMessage("You're the only one here... Get some more people to play");
 	}
 	printMessage("User Online: ");
 	for (int i = 0; i < usernames.length(); i++) {
@@ -118,16 +135,39 @@ public class JUnoClient extends JFrame implements Receivable {
 	}
     }
 
-    private void initChat() {
-	JPanel sendPanel = new JPanel(new FlowLayout());
-	sendArea = new JTextArea(3, 20);
-	sendArea.setEditable(true);
-	sendArea.setWrapStyleWord(true);
-	sendArea.setLineWrap(true);
-	JScrollPane sendScroll = new JScrollPane(sendArea);
-	sendScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-	sendPanel.add(sendScroll);
-	sendArea.addKeyListener(new KeyAdapter() {
+    private void initGameArea() {
+	cardPane = new JPanel(new BorderLayout());
+
+	// tests whether or not the picture of the card comes through
+	// Card cardTest1 = new Card(Card.Color.RED, Card.Value.ZERO);
+	// gamePanel.add(cardTest1, "Center");
+
+	contentPane.add(cardPane, "Center");
+	playerHand = new JPanel(new FlowLayout());
+	cardPane.add(playerHand, "South");
+
+    }
+
+    private void initMessages() {
+	JPanel messagePane = new JPanel(new BorderLayout());
+	messageArea = new JTextArea();
+	messageArea.setEditable(false);
+	messageArea.setWrapStyleWord(true);
+	messageArea.setLineWrap(true);
+	JScrollPane messageScroll = new JScrollPane(messageArea);
+	messageScroll.setSize(150, 200);
+	messageScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+	messagePane.add(messageScroll, "Center");
+
+	JPanel messageInputPanel = new JPanel(new FlowLayout());
+	messageInputArea = new JTextArea(3, 15);
+	messageInputArea.setEditable(true);
+	messageInputArea.setWrapStyleWord(true);
+	messageInputArea.setLineWrap(true);
+	JScrollPane inputScroll = new JScrollPane(messageInputArea);
+	inputScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+	messageInputPanel.add(inputScroll);
+	messageInputArea.addKeyListener(new KeyAdapter() {
 	    @Override
 	    public void keyPressed(KeyEvent e) {
 		if (e.getKeyCode() == KeyEvent.VK_ENTER && e.getModifiers() == KeyEvent.CTRL_MASK) {
@@ -136,36 +176,21 @@ public class JUnoClient extends JFrame implements Receivable {
 	    }
 	});
 
-	JPanel messagePanel = new JPanel(new BorderLayout());
-	messageArea = new JTextArea();
-	messageArea.setEditable(false);
-	messageArea.setWrapStyleWord(true);
-	messageArea.setLineWrap(true);
-	JScrollPane messageScroll = new JScrollPane(messageArea);
-	messageScroll.setSize(getSize());//
-	messageScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-	messagePanel.add(messageScroll, "Center");
-
 	JButton send = new JButton("Send");
-	sendPanel.add(send);
+	messageInputPanel.add(send);
 	send.addActionListener(e -> sendMessage());
 	JButton startButton = new JButton("Start Game");
 	startButton.addActionListener(e -> startGame());
-	messagePanel.add(startButton);
-	messagePanel.add(sendPanel, "South");
-	contentPanel.add(messagePanel, "West");
-	messagePanel.setVisible(true);
-	messageArea.requestFocusInWindow();
+	messageInputPanel.add(startButton);
+	messageInputPanel.add(messagePane, "South");
+	contentPane.add(messageInputPanel, "West");
+	messagePane.setVisible(true);
+	messageInputArea.requestFocusInWindow();
     }
 
-    private void initGameArea() {
-	JPanel gamePanel = new JPanel(new BorderLayout());
-
-	// tests whether or not the picture of the card comes through
-	// Card cardTest1 = new Card(Card.Color.RED, Card.Value.ZERO);
-	// gamePanel.add(cardTest1, "Center");
-	contentPanel.add(gamePanel, "Center");
-
+    private void placeCard(Card c, JPanel hand) {
+	hand.add(c);
+	cardPane.updateUI();
     }
 
     public void printMessage(String message) {
@@ -175,14 +200,13 @@ public class JUnoClient extends JFrame implements Receivable {
 
     private void sendMessage() {
 	JSONObject jsonMessage = new JSONObject();
-
 	String messageSend;
-	messageSend = sendArea.getText();
+	messageSend = messageInputArea.getText();
 
 	if (messageSend.equals("\\whois")) {
 	    jsonMessage.put("type", "whois");
 	    protocol.sendMessage(jsonMessage);
-	    sendArea.setText("");
+	    messageInputArea.setText("");
 	    printMessage("The \"whois\" function has been requested.");
 	    return;
 	}
@@ -204,7 +228,7 @@ public class JUnoClient extends JFrame implements Receivable {
 	System.out.println("Execution of sendText() complete.");
 	protocol.sendMessage(jsonMessage);
 	printMessage(username + ": " + messageSend + "\n");
-	sendArea.setText("");
+	messageInputArea.setText("");
     }
 
     @Override
