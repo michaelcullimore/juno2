@@ -3,12 +3,14 @@ package juno2;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -142,31 +144,37 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	// Card cardTest1 = new Card(Card.Color.RED, Card.Value.ZERO);
 	// gamePanel.add(cardTest1, "Center");
 
-	contentPane.add(cardPane, "Center");
+	contentPane.add(cardPane, "East");
 	playerHand = new JPanel(new FlowLayout());
 	cardPane.add(playerHand, "South");
 
     }
 
     private void initMessages() {
-	JPanel messagePane = new JPanel(new BorderLayout());
+	JPanel messagePane = new JPanel();
+	messagePane.setLayout(new BoxLayout(messagePane, BoxLayout.Y_AXIS));
+
 	messageArea = new JTextArea();
 	messageArea.setEditable(false);
 	messageArea.setWrapStyleWord(true);
 	messageArea.setLineWrap(true);
+	messageArea.setFont(new Font("Arial", Font.PLAIN, 16));
+	messagePane.add(messageArea, "North");
+
 	JScrollPane messageScroll = new JScrollPane(messageArea);
 	messageScroll.setSize(150, 200);
 	messageScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 	messagePane.add(messageScroll, "Center");
 
-	JPanel messageInputPanel = new JPanel(new FlowLayout());
 	messageInputArea = new JTextArea(3, 15);
 	messageInputArea.setEditable(true);
 	messageInputArea.setWrapStyleWord(true);
 	messageInputArea.setLineWrap(true);
+	messageInputArea.setFont(new Font("Arial", Font.PLAIN, 16));
+
 	JScrollPane inputScroll = new JScrollPane(messageInputArea);
 	inputScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-	messageInputPanel.add(inputScroll);
+	messagePane.add(inputScroll);//
 	messageInputArea.addKeyListener(new KeyAdapter() {
 	    @Override
 	    public void keyPressed(KeyEvent e) {
@@ -177,13 +185,13 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	});
 
 	JButton send = new JButton("Send");
-	messageInputPanel.add(send);
+	messagePane.add(send);
 	send.addActionListener(e -> sendMessage());
 	JButton startButton = new JButton("Start Game");
 	startButton.addActionListener(e -> startGame());
-	messageInputPanel.add(startButton);
-	messageInputPanel.add(messagePane, "South");
-	contentPane.add(messageInputPanel, "West");
+	messagePane.add(startButton);
+	// messagePane.add(messagePane, "South");
+	contentPane.add(messagePane, "West");
 	messagePane.setVisible(true);
 	messageInputArea.requestFocusInWindow();
     }
