@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
@@ -60,6 +62,8 @@ public class JUnoClient2 extends JFrame implements Receivable {
     private JPanel cpuHand1;
     private JPanel cpuHand2;
     private JPanel cpuHand3;
+    private JPanel controlPanel;
+    private JButton joinGameButton;
 
     public JUnoClient2() {
 	connectToServer();
@@ -145,9 +149,11 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	// gamePanel.add(cardTest1, "Center");
 
 	contentPane.add(cardPane, "East");
+	controlPanel = new JPanel();
+	controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.X_AXIS));
+	cardPane.add(controlPanel, "North");
 	playerHand = new JPanel(new FlowLayout());
 	cardPane.add(playerHand, "South");
-
     }
 
     private void initMessages() {
@@ -175,6 +181,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	JScrollPane inputScroll = new JScrollPane(messageInputArea);
 	inputScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 	messagePane.add(inputScroll);//
+	messageInputArea.requestFocusInWindow();
 	messageInputArea.addKeyListener(new KeyAdapter() {
 	    @Override
 	    public void keyPressed(KeyEvent e) {
@@ -192,8 +199,16 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	messagePane.add(startButton);
 	// messagePane.add(messagePane, "South");
 	contentPane.add(messagePane, "West");
+
+	joinGameButton = new JButton("Join Game");
+	joinGameButton.addActionListener(new ActionListener() {
+	    @Override
+	    public void actionPerformed(ActionEvent arg0) {
+	    }
+	});
+	cardPane.add(joinGameButton, BorderLayout.NORTH);
 	messagePane.setVisible(true);
-	messageInputArea.requestFocusInWindow();
+
     }
 
     private void placeCard(Card c, JPanel hand) {
