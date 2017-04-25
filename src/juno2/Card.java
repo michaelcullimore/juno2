@@ -1,26 +1,36 @@
 package juno2;
 
 import javax.swing.ImageIcon;
-import javax.swing.JLabel;
+import javax.swing.JButton;
 
-public class Card extends JLabel {
+public class Card extends JButton {
 
-    public static enum Color {
-	RED, YELLOW, BLUE, GREEN
+    static enum CardOrientation {
+	LEFT, RIGHT, UP
     }
 
-    public static enum Value {
+    static enum Color {
+	RED, YELLOW, BLUE, GREEN, WILD
+    };
+
+    static enum Value {
 	ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, SKIP, DRAW2, REVERSE, WILD, WILDD4
     };
 
     /**
      *
      */
-    private static final long serialVersionUID = 3156449895446853791L;;
+    private static final long serialVersionUID = 8335247149697385961L;;
 
+    private CardOrientation orientation;
     private Color color;
-
     private Value value;
+
+    Card(CardOrientation o) {
+	setOrietation(o);
+	setBackImage();
+
+    }
 
     Card(Color color, Value value) {
 	setColor(color);
@@ -28,12 +38,32 @@ public class Card extends JLabel {
 	setImage();
     }
 
+    public boolean equals(Card card) {
+	return ((this.getColor().equals(card.getColor())) && ((this.getValue().equals(card.getValue()))));
+
+    }
+
     private Color getColor() {
 	return color;
     }
 
+    private CardOrientation getOrientation() {
+	return orientation;
+    }
+
     private Value getValue() {
 	return value;
+    }
+
+    @Override
+    public int hashCode() {
+	return super.hashCode();
+    }
+
+    private void setBackImage() {
+	ImageIcon cardImage = new ImageIcon(
+		getClass().getResource("/images/back" + "-" + getOrientation().toString().toLowerCase() + ".png"));
+	setIcon(cardImage);
     }
 
     private void setColor(Color color) {
@@ -46,7 +76,12 @@ public class Card extends JLabel {
 	setIcon(cardImage);
     }
 
+    private void setOrietation(CardOrientation orientation) {
+	this.orientation = orientation;
+    }
+
     private void setValue(Value value) {
 	this.value = value;
     }
+
 }
