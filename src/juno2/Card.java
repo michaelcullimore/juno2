@@ -1,5 +1,6 @@
 package juno2;
 
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 
@@ -36,6 +37,7 @@ public class Card extends JButton {
 	setColor(color);
 	setValue(value);
 	setImage();
+	setBorder(BorderFactory.createEmptyBorder());
     }
 
     public boolean equals(Card card) {
@@ -43,7 +45,7 @@ public class Card extends JButton {
 
     }
 
-    private Color getColor() {
+    Color getColor() {
 	return color;
     }
 
@@ -51,7 +53,7 @@ public class Card extends JButton {
 	return orientation;
     }
 
-    private Value getValue() {
+    Value getValue() {
 	return value;
     }
 
@@ -66,7 +68,7 @@ public class Card extends JButton {
 	setIcon(cardImage);
     }
 
-    private void setColor(Color color) {
+    void setColor(Color color) {
 	this.color = color;
     }
 

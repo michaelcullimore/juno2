@@ -1,8 +1,10 @@
 package juno2;
 
+import java.awt.Color;
 import java.util.ArrayList;
 
 import javax.swing.JPanel;
+import javax.swing.border.TitledBorder;
 
 import juno2.Card.CardOrientation;
 
@@ -57,8 +59,22 @@ public class Hand extends JPanel {
 	}
     }
 
+    public void resetTurnHighlight() {
+	this.setBackground(null);
+
+    }
+
     private void setOrientation(CardOrientation co) {
 	orientation = co;
+    }
+
+    public void setTurnHighlight() {
+	this.setBackground(Color.LIGHT_GRAY);
+    }
+
+    public void setUserName(String user) {
+	this.username = user;
+	this.setBorder(new TitledBorder(username));
     }
 
 }

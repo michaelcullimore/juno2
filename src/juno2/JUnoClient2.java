@@ -9,12 +9,14 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -59,7 +61,6 @@ public class JUnoClient2 extends JFrame implements Receivable {
 
     private HashMap<String, Hand> hands;
 
-    // private JButton joinGameButton;
     private JButton sendButton;
     private JButton startButton;
 
@@ -71,6 +72,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 
     private JScrollPane messageScroll;
     private JScrollPane inputScroll;
+    private JScrollPane scrollSouth;
 
     private JTextArea messageArea;
     private JTextArea messageInputArea;
@@ -160,19 +162,6 @@ public class JUnoClient2 extends JFrame implements Receivable {
 		handleDealCard(jsonMessage);
 	    }
 	}
-	if (jsonMessage.has("players")) {
-	    JSONObject cardMessage = new JSONObject(jsonMessage.getString("card"));
-	    Card.Color color = Card.Color.valueOf(cardMessage.getString("color"));
-	    Card.Value value = Card.Value.valueOf(cardMessage.getString("value"));
-	    Card card = new Card(color, value);
-	    updateDiscardPile(card);
-
-	    JSONArray playersMessage = new JSONArray();
-	    playersMessage.put(jsonMessage.get("players"));
-	    for (int i = 0; i < playersMessage.length(); i++) {
-
-	    }
-	}
     }
 
     private void handleApplication(JSONObject jsonM) {
@@ -188,16 +177,26 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	    }
 	}
 	if (message.has("action")) {
-	    String action = message.getString("action");// do this in order to
-							// do a switch statement
+	    String action = message.getString("action");
 	    switch (action) {
 	    case ("playCard"): {
-		if (message.getString("user").equals(this.username)) {
-		    handlePlayCard(message);
-		    break;
-		}
+		handlePlayCard(message);
+		break;
 	    }
 	    case ("startCard"): {
+		if (message.has("players")) {
+		    JSONArray playersMessage = message.getJSONArray("players");
+		    for (Object p : playersMessage) {
+			if (p instanceof JSONObject) {
+			    JSONObject player = (JSONObject) p;
+			    int numCards = (int) player.get("cards");
+			    for (int i = 0; i < numCards; i++) {
+				handleCardDealt(player.getString("username"));
+			    }
+			}
+		    }
+		    printMessage(message.getString("turn") + "'s turn.");
+		}
 		JSONObject cardMessage = new JSONObject(message.getString("card"));
 		Card.Color color = Card.Color.valueOf(cardMessage.getString("color"));
 		Card.Value value = Card.Value.valueOf(cardMessage.getString("value"));
@@ -213,7 +212,41 @@ public class JUnoClient2 extends JFrame implements Receivable {
 		break;
 	    }
 	    case ("turn"): {
-		printMessage(message.getString("user") + "'s turn.");
+		String trackTurn = message.getString("user");
+		if (trackTurn.equals(username)) {
+		    printMessage("It's your turn.");
+		} else {
+		    printMessage("It's " + trackTurn + "'s turn.");
+		}
+		setTurn(message);
+		break;
+	    }
+	    case ("callUno"): {
+		String calledUno = message.getString("user");
+		if (calledUno.equals(username)) {
+		    printMessage("UNO!!!!!!");
+		} else {
+		    printMessage(calledUno + "called UNO!!!");
+		}
+		break;
+	    }
+	    case ("win"): {
+		String winner = message.getString("username");
+		if (winner.equals(username)) {
+		    printMessage("You Win!!!");
+		} else {
+		    printMessage(winner + " won!");
+		}
+		break;
+	    }
+	    case ("quit"): {
+		String quitter = message.getString("username");
+		if (quitter.equals(username)) {
+		    printMessage("You quit the game.");
+		    resetCardPane();
+		} else {
+		    printMessage(quitter + " quit the game.");
+		}
 		break;
 	    }
 	    }
@@ -238,6 +271,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	} else if (!hands.containsValue(handEast)) {
 	    hands.put(player, handEast);
 	    handEast.addCard(new Card(handEast.getOrientation()));
+	    cardPane.updateUI();
 	    return;
 	}
 	System.err.println("There are too many players in the game...");
@@ -249,13 +283,27 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	printMessage(jsonMessage.getString("fromUser") + ": " + jsonMessage.getString("message"));
     }
 
-    public void handleDealCard(JSONObject jsonM) {// TODO fix this
+    public void handleDealCard(JSONObject jsonM) {
 	JSONObject jsonMessage = new JSONObject(jsonM.getString("card"));
 	Card.Color color = Card.Color.valueOf(jsonMessage.getString("color"));
 	Card.Value value = Card.Value.valueOf(jsonMessage.getString("value"));
 	Card card = new Card(color, value);
-	card.addActionListener(e -> playCard(color.toString(), value.toString()));
-	placeCard(card, username);
+	card.addActionListener(e -> {
+	    if (card.getColor() == Card.Color.WILD) {
+		String[] colors = { "BLUE", "GREEN", "RED", "YELLOW" };
+		String wildColor = "cancel";
+		Object selection = JOptionPane.showInputDialog(null, "Choose a new Color.", "Color Selection",
+			JOptionPane.QUESTION_MESSAGE, null, colors, colors[0]);
+		wildColor = (String) selection;
+		if (!(wildColor == null)) {
+		    card.setColor(Card.Color.valueOf(wildColor));
+		    playCard(card.getValue().toString(), card.getColor().toString());
+		}
+	    } else {
+		playCard(card.getValue().toString(), card.getColor().toString());
+	    }
+	});
+	placeCard(card);
     }
 
     public void handlePlayCard(JSONObject message) {
@@ -275,7 +323,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	}
     }
 
-    private void handleWhois(JSONObject jsonM) {// TODO not working
+    private void handleWhois(JSONObject jsonM) {
 	JSONArray usernames = jsonM.getJSONObject("message").getJSONArray("username");
 	if (usernames.length() == 1) {
 	    printMessage("You're the only one here... Get some more people to play");
@@ -296,7 +344,8 @@ public class JUnoClient2 extends JFrame implements Receivable {
 
 	// Player(South) hand
 	playerHandSouth = new Hand(Card.CardOrientation.UP);
-	JScrollPane scrollSouth = new JScrollPane(playerHandSouth, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+	playerHandSouth.setUserName(username);
+	scrollSouth = new JScrollPane(playerHandSouth, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
 		ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 	cardPane.add(scrollSouth, "South");
 	hands = new HashMap<>();
@@ -331,6 +380,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	discardPile = new JPanel();
 	discardPile.setLayout(new GridBagLayout());
 	cardPane.add(discardPile, "Center");
+	contentPane.add(cardPane, "Center");
 	cardPane.updateUI();
 
 	// Control Panel
@@ -345,21 +395,31 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	// Join Button
 	JButton joinButton = new JButton("Join Game");
 	joinButton.addActionListener(e -> sendJoinGame());
+	controlPanel.add(joinButton);
 
 	// Reset Button
 	JButton resetButton = new JButton("Reset Game");
 	resetButton.addActionListener(e -> sendResetGame());
 	controlPanel.add(resetButton);
 
+	// Call Uno Button
+	JButton callUnoButton = new JButton("Call Uno!");
+	callUnoButton.addActionListener(e -> sendCallUno());
+	controlPanel.add(callUnoButton);
+
 	// Draw Card Button
 	JButton drawCardButton = new JButton("Draw Card");
 	drawCardButton.addActionListener(e -> drawCard());
 	controlPanel.add(drawCardButton);
+
+	// Quit Button
+	JButton quitButton = new JButton("Quit Game");
+	quitButton.addActionListener(e -> sendQuitGame());
+	controlPanel.add(quitButton);
 	controlPanel.updateUI();
 
 	cardPane.add(controlPanel, "North");
-	contentPane.add(cardPane, "East");
-
+	contentPane.add(cardPane, "Center");
     }
 
     private void initMessages() {
@@ -386,7 +446,7 @@ public class JUnoClient2 extends JFrame implements Receivable {
 
 	inputScroll = new JScrollPane(messageInputArea);
 	inputScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-	messagePane.add(inputScroll);//
+	messagePane.add(inputScroll);
 	messageInputArea.requestFocusInWindow();
 	messageInputArea.addKeyListener(new KeyAdapter() {
 	    @Override
@@ -408,11 +468,11 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	contentPane.add(messagePane, "West");
 
 	messagePane.setVisible(true);
-
     }
 
-    private void placeCard(Card c, String playerHand) {
+    private void placeCard(Card c) {
 	playerHandSouth.add(c);
+	scrollSouth.getViewport().setViewPosition(new java.awt.Point(20000, 0));
 	cardPane.updateUI();
     }
 
@@ -444,6 +504,17 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	cardPane.removeAll();
 	initGameArea();
 	cardPane.updateUI();
+    }
+
+    private void sendCallUno() {
+	JSONObject unoMessage = new JSONObject();
+	unoMessage.put("type", "application");
+	JSONObject message = new JSONObject();
+	message.put("action", "callUno");
+	message.put("user", username);
+	message.put("module", "juno");
+	unoMessage.put("message", message);
+	protocol.sendMessage(unoMessage);
     }
 
     private void sendJoinGame() {
@@ -491,6 +562,16 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	messageInputArea.setText("");
     }
 
+    public void sendQuitGame() {
+	JSONObject message = new JSONObject();
+	message.put("type", "application");
+	JSONObject action = new JSONObject();
+	action.put("action", "quit");
+	action.put("module", "juno");
+	message.put("message", action);
+	protocol.sendMessage(message);
+    }
+
     private void sendResetGame() {
 	JSONObject message = new JSONObject();
 	message.put("type", "application");
@@ -512,6 +593,17 @@ public class JUnoClient2 extends JFrame implements Receivable {
 	action.put("module", "juno");
 	message.put("message", action);
 	protocol.sendMessage(message);
+    }
+
+    private void setTurn(JSONObject jsonM) {
+	JSONObject jsonMessage = jsonM;
+	String user = jsonMessage.getString("user");
+	if (hands.containsKey(user)) {
+	    for (Entry<String, Hand> h : hands.entrySet()) {
+		h.getValue().resetTurnHighlight();
+	    }
+	    hands.get(user).setTurnHighlight();
+	}
     }
 
     @Override
